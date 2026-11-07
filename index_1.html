@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Market List</title>
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6F2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111915">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Market List">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column built for a phone. Sticky title on top, two tabs fixed at the bottom (Recipes, List). */
+:root {
+  --bg: #F4F6F2;
+  --surface: #FFFFFF;
+  --fg: #17251E;
+  --muted: #5C6B63;
+  --line: #D9E0D8;
+  --accent: #2D6A4F;
+  --accent-fg: #FFFFFF;
+  --accent-soft: #DCEBE2;
+  --danger: #A8281F;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23FFFFFF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Hanken Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111915;
+    --surface: #19231D;
+    --fg: #E5EEE8;
+    --muted: #9DB0A5;
+    --line: #2B3A31;
+    --accent: #7CCBA5;
+    --accent-fg: #0E1A14;
+    --accent-soft: #1F3328;
+    --danger: #F0877F;
+    --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%230E1A14' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111915;
+  --surface: #19231D;
+  --fg: #E5EEE8;
+  --muted: #9DB0A5;
+  --line: #2B3A31;
+  --accent: #7CCBA5;
+  --accent-fg: #0E1A14;
+  --accent-soft: #1F3328;
+  --danger: #F0877F;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%230E1A14' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.45 var(--body);
+  padding-block: 0 112px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--bg);
+}
+.wrap { max-width: 640px; margin: 0 auto; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* Header */
+.top {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 9;
+  background: var(--bg);
+  padding: 16px 0 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.titles { min-width: 0; flex: 1; }
+.eyebrow {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 {
+  margin: 0;
+  font: 700 30px/1.1 var(--display);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.back {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+.btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+.btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn.small { min-height: 40px; padding: 0 14px; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+
+.note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+/* Recipe cards */
+.cards { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.open {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  min-width: 0;
+}
+.open:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+.card h2 { margin: 0; font: 600 20px/1.2 var(--display); overflow-wrap: anywhere; text-wrap: balance; }
+.meta { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.pill {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.pill[aria-pressed="true"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: var(--check) center / 100% 100% no-repeat;
+}
+
+.empty {
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 22px 18px;
+}
+.empty h2 { margin: 0 0 6px; font: 600 20px/1.2 var(--display); }
+.empty p { margin: 0; color: var(--muted); max-width: 44ch; }
+
+/* Detail */
+.detail { gap: 16px; }
+.detail h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.detail ul, .detail ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.detail li { overflow-wrap: anywhere; }
+.detail ol { gap: 10px; }
+.detail ol li::marker { font-weight: 600; color: var(--accent); }
+
+/* Editor */
+.form { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 600; font-size: 14px; }
+.field .hint { color: var(--muted); font-size: 13px; margin: 0; }
+.field input, .field textarea, .addbar input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 16px;
+}
+.field textarea { min-height: 150px; line-height: 1.5; resize: vertical; }
+.lbl { font-weight: 600; font-size: 14px; }
+.ings { display: grid; gap: 10px; }
+.ing {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.ing-buy { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.stepper {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.stepper button {
+  width: 44px;
+  min-height: 46px;
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  color: var(--accent);
+}
+.field .stepper input {
+  width: 52px;
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  text-align: center;
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ing-buy .ing-unit { flex: 1; min-width: 0; }
+
+/* List */
+.addbar {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.addbar input { flex: 1; min-width: 0; }
+.group { margin: 0 0 22px; }
+.group h2 {
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: 600 18px/1.2 var(--display);
+}
+.group h2 span { font: 500 13px var(--body); color: var(--muted); }
+.items { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.item { display: flex; align-items: stretch; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.rowlab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 10px 14px; min-height: 56px; cursor: pointer; }
+.chk {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border: 2px solid var(--muted);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.chk:checked { background: var(--accent) var(--check) center / 100% 100% no-repeat; border-color: var(--accent); }
+.txt { min-width: 0; display: grid; }
+.line { overflow-wrap: anywhere; }
+.qty { font-weight: 600; font-variant-numeric: tabular-nums; }
+.txt small { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.item.done .line { text-decoration: line-through; color: var(--muted); }
+.item.done .qty { color: var(--muted); }
+.x {
+  flex: none;
+  width: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+}
+.hint-text { margin: 0; color: var(--muted); padding: 4px 2px; }
+.qstep { flex: none; display: flex; align-items: center; gap: 6px; padding-right: 10px; }
+.qb {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1;
+}
+.link {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: inherit;
+  padding: 4px 6px;
+  margin: -4px 0;
+  text-decoration: underline;
+}
+.item.skip .rowlab { cursor: default; }
+.tag {
+  justify-self: start;
+  margin-top: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.tag.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.grip {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  touch-action: none;
+  cursor: grab;
+}
+.sortable-ghost { opacity: 0.4; }
+.sortable-fallback { background: var(--surface); border-radius: 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.item.skip .line { color: var(--muted); }
+
+/* Tabs */
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.tabs .in { max-width: 640px; margin: 0 auto; display: flex; gap: 8px; }
+.tab {
+  flex: 1;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.tab[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.badge {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 11;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 14px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .pill, .tab { transition: background-color 0.15s, color 0.15s; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <button class="back" id="backBtn" data-act="back" hidden>Back</button>
+    <div class="titles">
+      <p class="eyebrow">Market List</p>
+      <h1 id="pageTitle">Recipes</h1>
+      <p class="sub" id="pageSub"></p>
+    </div>
+  </header>
+
+  <p class="note" id="status" hidden></p>
+
+  <section id="recipesView">
+    <div class="actions">
+      <button class="btn" data-act="new">New recipe</button>
+      <button class="btn ghost" data-act="clearweek" id="clearWeek" hidden>Clear this week's picks</button>
+    </div>
+    <ul class="cards" id="recipeCards"></ul>
+  </section>
+
+  <section id="detailView" hidden></section>
+
+  <section id="editView" hidden>
+    <form class="form" id="editForm" autocomplete="off">
+      <div class="field">
+        <label for="edTitle">Recipe name</label>
+        <input id="edTitle" type="text" placeholder="Weeknight chili" enterkeyhint="next">
+      </div>
+      <div class="field">
+        <span class="lbl" id="ingLabel">Ingredients to buy</span>
+        <p class="hint">Enter how much you need to buy at the store, not how much the recipe uses. For cumin, that's 1 jar.</p>
+        <div class="ings" id="ingList" role="group" aria-labelledby="ingLabel"></div>
+        <button class="btn ghost" type="button" data-act="ing-add">Add ingredient</button>
+        <datalist id="unitList">
+          <option value="lb"></option><option value="oz"></option><option value="bag"></option><option value="bottle"></option>
+          <option value="box"></option><option value="bunch"></option><option value="can"></option><option value="carton"></option>
+          <option value="dozen"></option><option value="head"></option><option value="jar"></option><option value="loaf"></option>
+          <option value="pack"></option>
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="edSteps">Steps</label>
+        <textarea id="edSteps" placeholder="Brown the beef with the onion.&#10;Add garlic, spices, beans and tomatoes.&#10;Simmer for 45 minutes."></textarea>
+        <p class="hint">One step per line. No need to number them.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" type="submit">Save recipe</button>
+        <button class="btn ghost" type="button" data-act="cancel">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="listView" hidden>
+    <form class="addbar" id="addForm" autocomplete="off">
+      <input id="addInput" type="text" placeholder="Add an item, like paper towels" enterkeyhint="done" aria-label="Add an item to the list">
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div id="listBody"></div>
+  </section>
+</div>
+
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <div class="in">
+    <button class="tab" id="tabRecipes" data-act="tab-recipes">Recipes</button>
+    <button class="tab" id="tabList" data-act="tab-list">Grocery list <span class="badge" id="badge" hidden></span></button>
+  </div>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+
+  /* ---------- Ingredient parsing ---------- */
+  var UNITS = {
+    tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+    tbsp: "tbsp", tbs: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+    cup: "cup", cups: "cup", c: "cup",
+    oz: "oz", ounce: "oz", ounces: "oz",
+    lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
+    can: "can", cans: "can",
+    clove: "clove", cloves: "clove",
+    pinch: "pinch", pinches: "pinch",
+    bunch: "bunch", bunches: "bunch",
+    pkg: "pkg", package: "pkg", packages: "pkg",
+    jar: "jar", jars: "jar",
+    bag: "bag", bags: "bag",
+    stick: "stick", sticks: "stick",
+    slice: "slice", slices: "slice",
+    pt: "pint", pint: "pint", pints: "pint",
+    qt: "qt", quart: "qt", quarts: "qt",
+    gal: "gal", gallon: "gal", gallons: "gal",
+    box: "box", boxes: "box",
+    bottle: "bottle", bottles: "bottle",
+    pack: "pack", packs: "pack",
+    carton: "carton", cartons: "carton",
+    loaf: "loaf", loaves: "loaf",
+    head: "head", heads: "head",
+    dozen: "dozen"
+  };
+  var PLURAL = { cup: "cups", can: "cans", clove: "cloves", bunch: "bunches", jar: "jars", bag: "bags", stick: "sticks", slice: "slices", pint: "pints", pinch: "pinches", box: "boxes", bottle: "bottles", pack: "packs", carton: "cartons", loaf: "loaves", head: "heads" };
+  var VULGAR = { "½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4", "¾": "3/4", "⅛": "1/8" };
+  var GLYPH = { 0.125: "⅛", 0.25: "¼", 0.333: "⅓", 0.5: "½", 0.667: "⅔", 0.75: "¾" };
+
+  function toNum(t) {
+    t = t.trim();
+    var m = t.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (m) return +m[1] + +m[2] / +m[3];
+    m = t.match(/^(\d+)\/(\d+)$/);
+    if (m) return +m[1] / +m[2];
+    return parseFloat(t);
+  }
+  function parseLine(raw) {
+    var s = String(raw).trim().replace(/^[-*•]\s*/, "");
+    if (!s) return null;
+    s = s.replace(/[½⅓⅔¼¾⅛]/g, function (m) { return " " + VULGAR[m] + " "; }).replace(/\s+/g, " ").trim();
+    var qty = null, unit = null;
+    var m = s.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.\d+|\d+)\s*/);
+    if (m) { qty = toNum(m[1]); s = s.slice(m[0].length); }
+    var um = s.match(/^([A-Za-z]+)\.?\s+(.+)$/);
+    if (qty !== null && um && UNITS[um[1].toLowerCase()]) { unit = UNITS[um[1].toLowerCase()]; s = um[2]; }
+    s = s.replace(/^of\s+/i, "").trim();
+    return { qty: qty, unit: unit, name: s || String(raw).trim() };
+  }
+  function fmtQty(n) {
+    var whole = Math.floor(n + 1e-9), frac = n - whole, out = "";
+    var keys = [0.125, 0.25, 0.333, 0.5, 0.667, 0.75], best = null;
+    for (var i = 0; i < keys.length; i++) if (Math.abs(frac - keys[i]) < 0.04) best = keys[i];
+    if (frac < 0.04) return String(whole);
+    if (frac > 0.96) return String(whole + 1);
+    if (best) return (whole ? whole : "") + GLYPH[best];
+    return String(Math.round(n * 100) / 100);
+  }
+  function unitText(u, qty) { return qty > 1 && PLURAL[u] ? PLURAL[u] : u; }
+  function singular(name) {
+    var w = name.toLowerCase().trim();
+    if (/ies$/.test(w)) return w.replace(/ies$/, "y");
+    if (/(ss|us)$/.test(w)) return w;
+    if (/oes$/.test(w)) return w.replace(/es$/, "");
+    if (/s$/.test(w)) return w.replace(/s$/, "");
+    return w;
+  }
+  function lines(text) {
+    return String(text || "").split(/\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+  }
+  function stepLines(text) {
+    return lines(text).map(function (l) { return l.replace(/^\d+[.)]\s*/, ""); });
+  }
+  function cleanUnit(u) {
+    var t = String(u || "").trim().toLowerCase().replace(/\.$/, "");
+    return Object.prototype.hasOwnProperty.call(UNITS, t) ? UNITS[t] : t;
+  }
+  /* Ingredients are stored as buy amounts: [{name, qty, unit}]. Older text-only recipes are converted on read. */
+  function ingredientsOf(r) {
+    var raw = r.ingredients, out = [];
+    if (Array.isArray(raw)) {
+      raw.forEach(function (i) {
+        var name = String((i && i.name) || "").trim();
+        if (!name) return;
+        var q = parseFloat(i.qty);
+        out.push({ name: name, qty: q > 0 ? q : 1, unit: cleanUnit(i.unit) });
+      });
+    } else {
+      lines(raw).forEach(function (l) {
+        var p = parseLine(l);
+        if (p) out.push({ name: p.name, qty: p.qty > 0 ? p.qty : 1, unit: p.unit || "" });
+      });
+    }
+    return out;
+  }
+  function buyText(qty, unit) {
+    return fmtQty(qty) + (unit ? " " + unitText(unit, qty) : "×");
+  }
+
+  /* ---------- State ---------- */
+  var S = {
+    recipes: [],
+    list: { extras: [], checked: {}, overrides: {}, cats: {}, order: [] },
+    reorder: false,
+    confirmClear: false,
+    tab: "recipes",
+    view: "recipes",
+    openId: null,
+    editId: null,
+    confirmDelete: null,
+    db: null,
+    mode: "pending",
+    loaded: false,
+    slow: false,
+    err: false
+  };
+  var LOCAL_KEY = "market-list-v1";
+  var SEED = [{"id": "boursin-steak-and-orzo", "title": "Boursin Steak and Orzo", "planned": false, "createdAt": 1793946480000, "ingredients": [{"name": "boneless sirloin steak", "qty": 1.25, "unit": "lb"}, {"name": "orzo", "qty": 1, "unit": "box"}, {"name": "Boursin Garlic & Fine Herbs cheese", "qty": 1, "unit": "pack"}, {"name": "low-sodium beef broth", "qty": 1, "unit": "carton"}, {"name": "olive oil", "qty": 1, "unit": "bottle"}, {"name": "garlic", "qty": 1, "unit": "head"}, {"name": "kosher salt", "qty": 1, "unit": "box"}, {"name": "black pepper", "qty": 1, "unit": "jar"}], "steps": "Season the steak with salt and pepper, then sear in olive oil in a large deep skillet until browned and 145\u00b0F inside. Rest it on a cutting board.\nLower the heat and cook the garlic about 30 seconds. Stir in the dry orzo to coat it.\nAdd 3 cups of the broth and simmer 10 to 12 minutes, stirring often, until the orzo is tender. Keep the extra broth on hand to loosen it.\nOn low heat, stir in the Boursin until creamy. Adjust salt and pepper.\nSlice the steak against the grain and serve over the orzo.\nSource: https://www.savoryflow.com/boursin-steak-and-orzo/"}, {"id": "mw019r7qs06f", "title": "Chili", "planned": false, "createdAt": 1793670779654, "steps": "", "ingredients": [{"name": "Onion", "qty": 1, "unit": ""}, {"name": "Ground beef", "qty": 1, "unit": ""}, {"name": "jalapeno", "qty": 3, "unit": ""}, {"name": "kidney beans", "qty": 3, "unit": ""}, {"name": "diced tomatoes", "qty": 1, "unit": ""}, {"name": "chili packets", "qty": 2, "unit": ""}, {"name": "beef broth", "qty": 1, "unit": "can"}, {"name": "garlic", "qty": 1, "unit": ""}]}, {"id": "mw01c333l89p", "title": "Lemon garlic chicken", "planned": false, "createdAt": 1793670888351, "steps": "", "ingredients": [{"name": "chicken breast", "qty": 1, "unit": ""}, {"name": "lemon", "qty": 2, "unit": ""}, {"name": "bell peppers", "qty": 3, "unit": ""}, {"name": "garlic", "qty": 1, "unit": ""}, {"name": "chicken broth", "qty": 1, "unit": ""}, {"name": "heavy whipping cream", "qty": 1, "unit": ""}, {"name": "red onion", "qty": 1, "unit": ""}]}, {"id": "mw5gzai3sqfn", "title": "Chicken noodle soup", "planned": false, "createdAt": 1793999496172, "steps": "", "ingredients": [{"name": "rotisserie chicken", "qty": 1, "unit": ""}, {"name": "chicken broth", "qty": 1, "unit": "box"}, {"name": "celery", "qty": 1, "unit": "bag"}, {"name": "egg noodle", "qty": 1, "unit": ""}, {"name": "carrot", "qty": 2, "unit": ""}, {"name": "onion", "qty": 1, "unit": ""}, {"name": "garlic", "qty": 1, "unit": ""}]}];
+
+  function loadLocal() {
+    try {
+      var d = JSON.parse(localStorage.getItem(LOCAL_KEY) || "null");
+      if (d) { S.recipes = d.recipes || []; S.list = d.list || S.list; } else { S.recipes = SEED.slice(); }
+    } catch (e) {}
+    S.list.overrides = S.list.overrides || {};
+    S.list.cats = S.list.cats || {};
+    S.list.order = Array.isArray(S.list.order) ? S.list.order : [];
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ recipes: S.recipes, list: S.list })); } catch (e) {}
+  }
+
+  var chains = {};
+  function queue(path, fn) {
+    chains[path] = (chains[path] || Promise.resolve()).then(function () {
+      return fn().catch(function (e) {
+        if (e && e.code === "unavailable") return fn();
+        throw e;
+      });
+    }).catch(function () { toast("Couldn't save that change. Try again."); });
+  }
+  function persistRecipe(r) {
+    if (S.mode === "db") {
+      var data = { title: r.title, ingredients: r.ingredients, steps: r.steps, planned: !!r.planned, createdAt: r.createdAt };
+      queue("recipes/" + r.id, function () { return S.db.doc("recipes/" + r.id).set(data); });
+    } else saveLocal();
+  }
+  function persistDelete(id) {
+    if (S.mode === "db") queue("recipes/" + id, function () { return S.db.doc("recipes/" + id).delete(); });
+    else saveLocal();
+  }
+  function persistList() {
+    if (S.mode === "db") {
+      var data = { extras: S.list.extras.map(function (e) { return { id: e.id, text: e.text, qty: e.qty || 1 }; }), checked: Object.assign({}, S.list.checked), overrides: Object.assign({}, S.list.overrides), cats: Object.assign({}, S.list.cats), order: S.list.order.slice() };
+      queue("lists/main", function () { return S.db.doc("lists/main").set(data); });
+    } else saveLocal();
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function byId(id) { for (var i = 0; i < S.recipes.length; i++) if (S.recipes[i].id === id) return S.recipes[i]; return null; }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+  /* ---------- Grocery list ---------- */
+  function aggregate() {
+    var map = {}, order = [];
+    S.recipes.forEach(function (r) {
+      if (!r.planned) return;
+      ingredientsOf(r).forEach(function (p) {
+        var key = singular(p.name) + "|" + (p.unit || "");
+        var it = map[key];
+        if (!it) { it = map[key] = { key: key, name: p.name, unit: p.unit, qty: 0, from: [] }; order.push(key); }
+        it.qty += p.qty;
+        if (it.from.indexOf(r.title) < 0) it.from.push(r.title);
+      });
+    });
+    var items = order.map(function (k) { return map[k]; });
+    items.sort(function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+    return items;
+  }
+  /* Produce is guessed from the name. A tap on the item's label sets it by hand, and that choice is remembered by ingredient and unit. */
+  var PRODUCE_RE = new RegExp("\\b(?:apple|banana|orange|lemon|lime|grapefruit|grape|strawberr(?:y|ies)|blueberr(?:y|ies)|raspberr(?:y|ies)|blackberr(?:y|ies)|cranberr(?:y|ies)|melon|watermelon|cantaloupe|peach|pear|plum|cherr(?:y|ies)|mango|pineapple|avocado|tomato|cucumber|zucchini|squash|pumpkin|eggplant|carrot|celery|onion|scallion|shallot|leek|garlic|ginger|potato|mushroom|lettuce|spinach|kale|arugula|cabbage|broccoli|cauliflower|asparagus|brussels sprout|bell pepper|jalape[n\\u00F1]o|serrano|poblano|habanero|green bean|radish|beet|turnip|parsnip|fennel|cilantro|parsley|basil|mint|dill|rosemary|thyme|sage|chive)(?:e?s)?\\b", "i");
+  var NOT_PRODUCE_RE = /\b(?:canned|diced|crushed|paste|sauce|dried|ground|powder|frozen|juice|broth|stock|packets?|seasoning|pickled|flakes|cheese|cream|butter|bread|soup|salsa|dressing|chips?|jam|jelly|extract|oil|vinegar)\b/i;
+  function isProduce(key, name, unit) {
+    var c = S.list.cats[key];
+    if (c) return c === "produce";
+    if (/^(?:can|jar|carton|bottle|box)$/.test(unit || "")) return false;
+    return PRODUCE_RE.test(name) && !NOT_PRODUCE_RE.test(name);
+  }
+  /* Changes made with the - and + buttons are kept as overrides of the combined total, keyed by ingredient and unit. */
+  function adjustQty(key, delta) {
+    if (key.indexOf("x:") === 0) {
+      S.list.extras = S.list.extras.map(function (e) {
+        return "x:" + e.id === key ? { id: e.id, text: e.text, qty: Math.max(1, (e.qty || 1) + delta) } : e;
+      });
+      persistList();
+      renderAll();
+      return;
+    }
+    var it = aggregate().filter(function (x) { return x.key === key; })[0];
+    if (!it) return;
+    var has = S.list.overrides[key] !== undefined;
+    var cur = has ? S.list.overrides[key] : it.qty;
+    var next = Math.max(0, cur + delta);
+    var o = Object.assign({}, S.list.overrides);
+    if (next === it.qty) delete o[key]; else o[key] = next;
+    S.list.overrides = o;
+    if (next === 0) {
+      var c = Object.assign({}, S.list.checked);
+      delete c["r:" + key];
+      S.list.checked = c;
+    }
+    persistList();
+    renderAll();
+  }
+  /* Drops edits and checkmarks for items that no longer come from any picked recipe. */
+  function pruneList() {
+    var keys = {};
+    aggregate().forEach(function (it) { keys[it.key] = true; });
+    var changed = false, o = {}, c = {};
+    Object.keys(S.list.overrides).forEach(function (k) { if (keys[k]) o[k] = S.list.overrides[k]; else changed = true; });
+    Object.keys(S.list.checked).forEach(function (k) { if (k.indexOf("r:") !== 0 || keys[k.slice(2)]) c[k] = true; else changed = true; });
+    if (changed) { S.list.overrides = o; S.list.checked = c; persistList(); }
+  }
+  var lastOpen = [];
+  var sorter = null;
+  /* In Reorder mode an unchecked row swaps its quantity buttons for a drag handle. */
+  function itemRow(key, qtyText, name, subHtml, extraId, stepKey, prod, draggable) {
+    if (!draggable) return itemRowBase(key, qtyText, name, subHtml, extraId, stepKey, prod);
+    var html = itemRowBase(key, qtyText, name, subHtml, null, null, prod);
+    var grip = '<div class="qstep"><button type="button" class="grip" aria-label="Drag to move ' + esc(name) + '">☰</button></div>';
+    return html.replace('<li class="item', function () { return '<li data-key="' + esc(key) + '" class="item drag'; })
+      .replace(/<\/li>$/, function () { return grip + "</li>"; });
+  }
+  /* Dropping an item above or below the produce line also changes its produce tag. */
+  function onDragEnd(evt) {
+    var moved = evt.item.getAttribute("data-key");
+    var seq = Array.prototype.map.call($("itemList").querySelectorAll("li.drag"), function (li) { return li.getAttribute("data-key"); });
+    var idx = seq.indexOf(moved), was = null;
+    lastOpen.forEach(function (x) { if (x.key === moved) was = x.prod; });
+    if (idx < 0 || was === null) { setTimeout(renderAll, 0); return; }
+    var P = lastOpen.filter(function (x) { return x.key !== moved && x.prod; }).length;
+    var now = idx < P ? true : idx > P ? false : was;
+    if (now !== was) {
+      var nc = Object.assign({}, S.list.cats);
+      nc[moved] = now ? "produce" : "other";
+      S.list.cats = nc;
+      toast(now ? "Moved into produce" : "Moved out of produce");
+    }
+    var inSeq = {};
+    seq.forEach(function (k) { inSeq[k] = true; });
+    S.list.order = seq.concat(S.list.order.filter(function (k) { return !inSeq[k]; }));
+    persistList();
+    setTimeout(renderAll, 0);
+  }
+  function itemRowBase(key, qtyText, name, subHtml, extraId, stepKey, prod) {
+    var on = !!S.list.checked[key];
+    return '<li class="item' + (on ? " done" : "") + '"><label class="rowlab"><input type="checkbox" class="chk" data-key="' + esc(key) + '"' + (on ? " checked" : "") + '>' +
+      '<span class="txt"><span class="line">' + (qtyText ? '<span class="qty">' + esc(qtyText) + "</span> " : "") + esc(name) + "</span>" +
+      (subHtml ? "<small>" + subHtml + "</small>" : "") +
+      '<button class="tag' + (prod ? " on" : "") + '" data-act="cat" data-key="' + esc(key) + '" aria-pressed="' + (prod ? "true" : "false") + '">' + (prod ? "Produce ×" : "+ Produce") + "</button></span></label>" +
+      (stepKey ? '<div class="qstep"><button class="qb" data-act="li-dec" data-key="' + esc(stepKey) + '" aria-label="Buy one fewer ' + esc(name) + '">−</button><button class="qb" data-act="li-inc" data-key="' + esc(stepKey) + '" aria-label="Buy one more ' + esc(name) + '">+</button></div>' : "") +
+      (extraId ? '<button class="x" data-act="rmextra" data-id="' + esc(extraId) + '" aria-label="Remove ' + esc(name) + '">×</button>' : "") + "</li>";
+  }
+  function sortDone(arr) {
+    return arr.filter(function (x) { return !x.on; }).concat(arr.filter(function (x) { return x.on; }));
+  }
+  function renderList() {
+    var skipped = [], items = [];
+    aggregate().forEach(function (it) {
+      var ov = S.list.overrides[it.key], has = ov !== undefined;
+      var qty = has ? ov : it.qty;
+      var key = "r:" + it.key;
+      if (qty <= 0) { skipped.push(it); return; }
+      var sub = esc(it.from.join(", ")) + (has ? ' · edited, was ' + esc(fmtQty(it.qty)) + ' <button class="link" data-act="li-reset" data-key="' + esc(it.key) + '">Reset</button>' : "");
+      items.push({ on: !!S.list.checked[key], name: it.name, prod: isProduce(key, it.name, it.unit), key: key, qtyText: buyText(qty, it.unit), sub: sub, stepKey: it.key, extraId: null });
+    });
+    S.list.extras.forEach(function (e) {
+      var key = "x:" + e.id;
+      items.push({ on: !!S.list.checked[key], name: e.text, prod: isProduce(key, e.text, ""), key: key, qtyText: buyText(e.qty || 1, ""), sub: "Added by you", stepKey: key, extraId: e.id });
+    });
+    var byName = function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); };
+    var rank = function (k) { var i = S.list.order.indexOf(k); return i < 0 ? 1e9 : i; };
+    var byOrder = function (a, b) {
+      if (a.prod !== b.prod) return a.prod ? -1 : 1;
+      var d = rank(a.key) - rank(b.key);
+      return d !== 0 ? d : byName(a, b);
+    };
+    var open = items.filter(function (x) { return !x.on; }).sort(byOrder);
+    var done = items.filter(function (x) { return x.on; }).sort(byName);
+    lastOpen = open.map(function (x) { return { key: x.key, prod: x.prod }; });
+    if (open.length < 2) S.reorder = false;
+    var h = "";
+    if (!items.length) {
+      h += '<p class="hint-text">Pick recipes on the Recipes tab and their ingredients show up here. Anything else you need, type into the box above.</p>';
+    } else {
+      if (!open.length) h += '<p class="hint-text">Everything is checked off.</p>';
+      if (open.length > 1 && window.Sortable) {
+        h += '<div class="actions"><button class="btn ghost small" data-act="reorder" aria-pressed="' + (S.reorder ? "true" : "false") + '">' + (S.reorder ? "Done reordering" : "Reorder items") + "</button></div>";
+        if (S.reorder) h += '<p class="note">Hold the handle on the right and drag an item to move it. Dropping it above or below the produce items changes its produce tag.</p>';
+      }
+      h += '<ul class="items" id="itemList">' + open.map(function (x) {
+        return itemRow(x.key, x.qtyText, x.name, x.sub, null, x.stepKey, x.prod, S.reorder);
+      }).join("") + done.map(function (x) {
+        return itemRow(x.key, x.qtyText, x.name, x.sub, null, x.stepKey, x.prod, null);
+      }).join("") + "</ul>";
+    }
+    if (skipped.length) {
+      h += '<div class="group"><h2>Not buying <span>' + skipped.length + '</span></h2><ul class="items">' + skipped.map(function (it) {
+        return '<li class="item skip"><div class="rowlab"><span class="txt"><span class="line">' + esc(it.name) + '</span><small>Was ' + esc(buyText(it.qty, it.unit)) + '</small></span></div>' +
+          '<div class="qstep"><button class="btn ghost small" data-act="li-reset" data-key="' + esc(it.key) + '">Put back</button></div></li>';
+      }).join("") + "</ul></div>";
+    }
+    var anyChecked = done.length > 0;
+    var checkedExtras = done.some(function (x) { return !!x.extraId; });
+    if (anyChecked) {
+      h += '<div class="actions"><button class="btn ghost small" data-act="uncheck">Uncheck everything</button>' +
+        (checkedExtras ? '<button class="btn ghost small" data-act="rmchecked">Remove checked extras</button>' : "") + "</div>";
+    }
+    if (items.length || skipped.length) {
+      if (S.confirmClear) h += '<p class="note">This removes everything on the list. Your saved recipes stay.</p>';
+      h += '<div class="actions">' + (S.confirmClear
+        ? '<button class="btn danger" data-act="clearlist">Tap again to clear</button><button class="btn ghost" data-act="clearcancel">Cancel</button>'
+        : '<button class="btn danger" data-act="clearlist">Clear list</button>') + "</div>";
+    }
+    if (sorter) { sorter.destroy(); sorter = null; }
+    $("listBody").innerHTML = h;
+    if (S.reorder && window.Sortable && $("itemList")) {
+      sorter = window.Sortable.create($("itemList"), {
+        handle: ".grip",
+        draggable: ".drag",
+        animation: 150,
+        forceFallback: true,
+        ghostClass: "sortable-ghost",
+        onEnd: onDragEnd
+      });
+    }
+    return { total: items.length, left: open.length };
+  }
+
+  /* ---------- Rendering ---------- */
+  function cardHtml(r) {
+    var n = ingredientsOf(r).length, s = stepLines(r.steps).length;
+    return '<li class="card"><button class="open" data-act="open" data-id="' + esc(r.id) + '"><h2>' + esc(r.title) + '</h2><p class="meta">' +
+      plural(n, "ingredient", "ingredients") + " · " + plural(s, "step", "steps") + "</p></button>" +
+      '<button class="pill" data-act="toggle" data-id="' + esc(r.id) + '" aria-pressed="' + (r.planned ? "true" : "false") + '">' +
+      (r.planned ? "On this week's list" : "Add to this week") + "</button></li>";
+  }
+  function renderRecipes() {
+    var sorted = S.recipes.slice().sort(function (a, b) { return (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase()); });
+    $("recipeCards").innerHTML = sorted.length
+      ? sorted.map(cardHtml).join("")
+      : '<li class="empty"><h2>No recipes yet</h2><p>Your recipes will show up here. Tap New recipe to add one with its ingredients and steps, then mark the ones you plan to cook this week.</p></li>';
+    $("clearWeek").hidden = !S.recipes.some(function (r) { return r.planned; });
+  }
+  function renderDetail() {
+    var r = byId(S.openId);
+    if (!r) { $("detailView").innerHTML = '<div class="empty"><h2>Recipe not found</h2><p>It may have been deleted.</p></div>'; return; }
+    var ing = ingredientsOf(r), st = stepLines(r.steps);
+    $("detailView").innerHTML = '<div class="card detail">' +
+      '<button class="pill" data-act="toggle" data-id="' + esc(r.id) + '" aria-pressed="' + (r.planned ? "true" : "false") + '">' + (r.planned ? "On this week's list" : "Add to this week") + "</button>" +
+      "<div><h3>Ingredients</h3>" + (ing.length ? "<ul>" + ing.map(function (i) { return '<li><span class="qty">' + esc(buyText(i.qty, i.unit)) + "</span> " + esc(i.name) + "</li>"; }).join("") + "</ul>" : '<p class="hint-text">No ingredients yet.</p>') + "</div>" +
+      "<div><h3>Steps</h3>" + (st.length ? "<ol>" + st.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ol>" : '<p class="hint-text">No steps yet.</p>') + "</div>" +
+      '<div class="actions" style="margin:0"><button class="btn" data-act="edit" data-id="' + esc(r.id) + '">Edit</button>' +
+      '<button class="btn danger" data-act="delete" data-id="' + esc(r.id) + '">' + (S.confirmDelete === r.id ? "Tap again to delete" : "Delete") + "</button></div></div>";
+  }
+  function renderStatus() {
+    var el = $("status"), msg = "";
+    if (S.mode === "local") msg = "";
+    else if (S.err) msg = "Can't reach your saved recipes right now. Changes may not be kept.";
+    else if (!S.loaded && S.slow) msg = "Can't reach your saved recipes yet. What you see may be out of date.";
+    else if (!S.loaded) msg = "Loading your saved recipes…";
+    el.textContent = msg;
+    el.hidden = !msg;
+  }
+  function renderAll() {
+    var stats = renderList();
+    renderRecipes();
+    if (S.view === "detail") renderDetail();
+
+    var v = S.view;
+    $("recipesView").hidden = v !== "recipes";
+    $("detailView").hidden = v !== "detail";
+    $("editView").hidden = v !== "edit";
+    $("listView").hidden = v !== "list";
+    $("tabs").hidden = v === "edit";
+    $("backBtn").hidden = !(v === "detail" || v === "edit");
+    $("backBtn").textContent = v === "edit" ? "Cancel" : "Recipes";
+    $("tabRecipes").setAttribute("aria-current", v === "list" ? "false" : "page");
+    $("tabList").setAttribute("aria-current", v === "list" ? "page" : "false");
+    $("tabRecipes").removeAttribute(v === "list" ? "aria-current" : "data-x");
+    $("tabList").removeAttribute(v === "list" ? "data-x" : "aria-current");
+
+    var planned = S.recipes.filter(function (r) { return r.planned; }).length;
+    var title = "Recipes", sub = "";
+    if (v === "recipes") {
+      title = "Recipes";
+      sub = S.recipes.length ? plural(S.recipes.length, "recipe", "recipes") + " · " + planned + " planned this week" : "Add your first recipe to get started";
+    } else if (v === "list") {
+      title = "Grocery list";
+      sub = stats.total ? plural(stats.total, "item", "items") + " · " + stats.left + " left to get" : "Nothing on the list yet";
+    } else if (v === "detail") {
+      var r = byId(S.openId);
+      title = r ? r.title : "Recipe";
+      sub = "";
+    } else if (v === "edit") {
+      title = S.editId ? "Edit recipe" : "New recipe";
+    }
+    $("pageTitle").textContent = title;
+    $("pageSub").textContent = sub;
+    $("pageSub").hidden = !sub;
+
+    var b = $("badge");
+    b.textContent = stats.left;
+    b.hidden = !stats.left;
+    renderStatus();
+  }
+
+  /* ---------- Actions ---------- */
+  function addIngRow(i, focus) {
+    var d = document.createElement("div");
+    d.className = "ing";
+    d.innerHTML = '<input class="ing-name" type="text" placeholder="Ingredient, like ground cumin" aria-label="Ingredient name" autocapitalize="none" value="' + esc(i.name) + '">' +
+      '<div class="ing-buy"><div class="stepper"><button type="button" data-act="qty-dec" aria-label="Buy fewer">−</button>' +
+      '<input class="ing-qty" type="number" inputmode="decimal" min="1" step="1" aria-label="How many to buy" value="' + esc(i.qty) + '">' +
+      '<button type="button" data-act="qty-inc" aria-label="Buy more">+</button></div>' +
+      '<input class="ing-unit" type="text" list="unitList" placeholder="Unit, like jar" aria-label="Unit" autocapitalize="none" value="' + esc(i.unit) + '">' +
+      '<button type="button" class="x" data-act="ing-remove" aria-label="Remove ingredient">×</button></div>';
+    $("ingList").appendChild(d);
+    if (focus) d.querySelector(".ing-name").focus();
+  }
+  function readIngredients() {
+    var out = [];
+    Array.prototype.forEach.call($("ingList").querySelectorAll(".ing"), function (row) {
+      var name = row.querySelector(".ing-name").value.trim();
+      if (!name) return;
+      var q = parseFloat(row.querySelector(".ing-qty").value);
+      out.push({ name: name, qty: q > 0 ? q : 1, unit: cleanUnit(row.querySelector(".ing-unit").value) });
+    });
+    return out;
+  }
+  function openEditor(id) {
+    var r = id ? byId(id) : null;
+    S.editId = r ? r.id : null;
+    $("edTitle").value = r ? r.title : "";
+    var rows = r ? ingredientsOf(r) : [];
+    $("ingList").innerHTML = "";
+    if (!rows.length) rows = [{ name: "", qty: 1, unit: "" }];
+    rows.forEach(function (i) { addIngRow(i, false); });
+    $("edSteps").value = r ? r.steps : "";
+    S.view = "edit";
+    renderAll();
+    window.scrollTo(0, 0);
+    $("edTitle").focus();
+  }
+  function go(view) { S.view = view; S.confirmDelete = null; S.confirmClear = false; renderAll(); window.scrollTo(0, 0); }
+
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-act]");
+    if (!el) return;
+    var act = el.getAttribute("data-act"), id = el.getAttribute("data-id");
+    if (act === "tab-recipes") return go("recipes");
+    if (act === "tab-list") return go("list");
+    if (act === "new") return openEditor(null);
+    if (act === "ing-add") return addIngRow({ name: "", qty: 1, unit: "" }, true);
+    if (act === "ing-remove") {
+      var row = el.closest(".ing");
+      if (row) row.remove();
+      if (!$("ingList").children.length) addIngRow({ name: "", qty: 1, unit: "" }, false);
+      return;
+    }
+    if (act === "qty-dec" || act === "qty-inc") {
+      var qi = el.parentNode.querySelector(".ing-qty");
+      var cur = parseFloat(qi.value);
+      if (!(cur > 0)) cur = 1;
+      qi.value = act === "qty-inc" ? cur + 1 : Math.max(1, cur - 1);
+      return;
+    }
+    if (act === "open") { S.openId = id; return go("detail"); }
+    if (act === "back") return go(S.view === "edit" && S.editId ? "detail" : "recipes");
+    if (act === "cancel") return go(S.editId ? "detail" : "recipes");
+    if (act === "edit") return openEditor(id);
+    if (act === "toggle") {
+      var r = byId(id);
+      if (!r) return;
+      r = Object.assign({}, r, { planned: !r.planned });
+      S.recipes = S.recipes.map(function (x) { return x.id === id ? r : x; });
+      persistRecipe(r);
+      pruneList();
+      return renderAll();
+    }
+    if (act === "delete") {
+      if (S.confirmDelete !== id) { S.confirmDelete = id; return renderAll(); }
+      S.recipes = S.recipes.filter(function (x) { return x.id !== id; });
+      persistDelete(id);
+      pruneList();
+      S.confirmDelete = null;
+      toast("Recipe deleted");
+      return go("recipes");
+    }
+    if (act === "clearweek") {
+      S.recipes = S.recipes.map(function (x) {
+        if (!x.planned) return x;
+        var n = Object.assign({}, x, { planned: false });
+        persistRecipe(n);
+        return n;
+      });
+      pruneList();
+      return renderAll();
+    }
+    if (act === "reorder") { S.reorder = !S.reorder; return renderAll(); }
+    if (act === "cat") {
+      var nc = Object.assign({}, S.list.cats);
+      nc[el.getAttribute("data-key")] = el.classList.contains("on") ? "other" : "produce";
+      S.list.cats = nc;
+      persistList();
+      return renderAll();
+    }
+    if (act === "li-dec") return adjustQty(el.getAttribute("data-key"), -1);
+    if (act === "li-inc") return adjustQty(el.getAttribute("data-key"), 1);
+    if (act === "li-reset") {
+      var o2 = Object.assign({}, S.list.overrides);
+      delete o2[el.getAttribute("data-key")];
+      S.list.overrides = o2;
+      persistList();
+      return renderAll();
+    }
+    if (act === "clearcancel") { S.confirmClear = false; return renderAll(); }
+    if (act === "clearlist") {
+      if (!S.confirmClear) { S.confirmClear = true; return renderAll(); }
+      S.confirmClear = false;
+      S.recipes = S.recipes.map(function (x) {
+        if (!x.planned) return x;
+        var n = Object.assign({}, x, { planned: false });
+        persistRecipe(n);
+        return n;
+      });
+      S.list.extras = [];
+      S.list.checked = {};
+      S.list.overrides = {};
+      persistList();
+      toast("List cleared");
+      return renderAll();
+    }
+    if (act === "uncheck") { S.list.checked = {}; persistList(); return renderAll(); }
+    if (act === "rmchecked") {
+      S.list.extras = S.list.extras.filter(function (x) { return !S.list.checked["x:" + x.id]; });
+      var keep = {};
+      Object.keys(S.list.checked).forEach(function (k) { if (k.indexOf("x:") !== 0) keep[k] = true; });
+      S.list.checked = keep;
+      persistList();
+      return renderAll();
+    }
+  });
+
+  $("listBody").addEventListener("change", function (e) {
+    var c = e.target;
+    if (!c.classList || !c.classList.contains("chk")) return;
+    var key = c.getAttribute("data-key");
+    var next = Object.assign({}, S.list.checked);
+    if (c.checked) next[key] = true; else delete next[key];
+    S.list.checked = next;
+    persistList();
+    renderAll();
+  });
+
+  $("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = $("addInput"), text = input.value.trim();
+    if (!text) return;
+    S.list.extras = S.list.extras.concat([{ id: newId(), text: text, qty: 1 }]);
+    input.value = "";
+    persistList();
+    renderAll();
+    input.focus();
+  });
+
+  $("ingList").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || !e.target.classList.contains("ing-name")) return;
+    e.preventDefault();
+    if (e.target.value.trim()) addIngRow({ name: "", qty: 1, unit: "" }, true);
+  });
+
+  $("editForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var title = $("edTitle").value.trim();
+    if (!title) { toast("Give the recipe a name first."); $("edTitle").focus(); return; }
+    var existing = S.editId ? byId(S.editId) : null;
+    var r = {
+      id: existing ? existing.id : newId(),
+      title: title,
+      ingredients: readIngredients(),
+      steps: $("edSteps").value.trim(),
+      planned: existing ? !!existing.planned : false,
+      createdAt: existing ? existing.createdAt : Date.now()
+    };
+    S.recipes = existing ? S.recipes.map(function (x) { return x.id === r.id ? r : x; }) : S.recipes.concat([r]);
+    persistRecipe(r);
+    pruneList();
+    S.openId = r.id;
+    toast("Recipe saved");
+    go("detail");
+  });
+
+  /* ---------- Startup ---------- */
+  function markLoaded() { S.loaded = true; S.slow = false; S.err = false; clearTimeout(S.timer); }
+
+  function init(db) {
+    if (!db) { S.mode = "local"; loadLocal(); markLoaded(); renderAll(); return; }
+    S.db = db;
+    S.mode = "db";
+    S.timer = setTimeout(function () { if (!S.loaded) { S.slow = true; renderStatus(); } }, 10000);
+    var fail = function () { S.err = true; renderStatus(); };
+    db.collection("recipes").onSnapshot(function (snap) {
+      S.recipes = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+      if (!snap.metadata.fromCache) markLoaded();
+      renderAll();
+    }, fail);
+    db.doc("lists/main").onSnapshot(function (snap) {
+      var d = snap.exists ? snap.data() : null;
+      S.list = {
+        extras: d && d.extras ? d.extras.map(function (x) { return { id: x.id, text: x.text, qty: x.qty > 0 ? x.qty : 1 }; }) : [],
+        checked: Object.assign({}, d && d.checked ? d.checked : {}),
+        overrides: Object.assign({}, d && d.overrides ? d.overrides : {}),
+        cats: Object.assign({}, d && d.cats ? d.cats : {}),
+        order: d && Array.isArray(d.order) ? d.order.slice() : []
+      };
+      renderAll();
+    }, fail);
+  }
+
+  renderAll();
+  if (window.claude && window.claude.use) {
+    window.claude.use("db").then(init, function () { init(null); });
+  } else {
+    init(null);
+  }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("./sw.js").catch(function () {}); });
+  }
+})();
+</script>
+
+</body>
+</html>
