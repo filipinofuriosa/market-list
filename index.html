@@ -357,8 +357,6 @@ h1 {
   font-weight: 600;
 }
 .tag.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
-.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-.tags .tag { margin-top: 0; }
 .grip {
   width: 48px;
   height: 48px;
@@ -624,7 +622,7 @@ h1 {
   /* ---------- State ---------- */
   var S = {
     recipes: [],
-    list: { extras: [], checked: {}, overrides: {}, cats: {}, order: [], moved: {} },
+    list: { extras: [], checked: {}, overrides: {}, cats: {}, order: [] },
     costco: { items: [], checked: {} },
     reorder: false,
     confirmClear: false,
@@ -678,12 +676,23 @@ h1 {
     S.list.overrides = S.list.overrides || {};
     S.list.cats = S.list.cats || {};
     S.list.order = Array.isArray(S.list.order) ? S.list.order : [];
-    S.list.moved = S.list.moved || {};
+    if (clearMoved()) saveLocal();
     applyUpdates();
     loadCostco();
   }
   function saveLocal() {
     try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ recipes: S.recipes, list: S.list })); } catch (e) {}
+  }
+
+  /* An earlier version could move grocery items to Costco, which set them to 0 here. Those items come back as normal. */
+  function clearMoved() {
+    var mv = S.list.moved;
+    if (!mv || typeof mv !== "object") { delete S.list.moved; return false; }
+    var o = Object.assign({}, S.list.overrides || {});
+    Object.keys(mv).forEach(function (k) { if (o[k] === 0) delete o[k]; });
+    S.list.overrides = o;
+    delete S.list.moved;
+    return Object.keys(mv).length > 0;
   }
 
   /* The Costco list is kept under its own key, so recipes and clearing the grocery list never touch it. */
@@ -731,7 +740,7 @@ h1 {
   }
   function persistList() {
     if (S.mode === "db") {
-      var data = { extras: S.list.extras.map(function (e) { return { id: e.id, text: e.text, qty: e.qty || 1 }; }), checked: Object.assign({}, S.list.checked), overrides: Object.assign({}, S.list.overrides), cats: Object.assign({}, S.list.cats), order: S.list.order.slice(), moved: Object.assign({}, S.list.moved) };
+      var data = { extras: S.list.extras.map(function (e) { return { id: e.id, text: e.text, qty: e.qty || 1 }; }), checked: Object.assign({}, S.list.checked), overrides: Object.assign({}, S.list.overrides), cats: Object.assign({}, S.list.cats), order: S.list.order.slice() };
       queue("lists/main", function () { return S.db.doc("lists/main").set(data); });
     } else saveLocal();
   }
@@ -804,11 +813,10 @@ h1 {
   function pruneList() {
     var keys = {};
     aggregate().forEach(function (it) { keys[it.key] = true; });
-    var changed = false, o = {}, c = {}, mv = {};
+    var changed = false, o = {}, c = {};
     Object.keys(S.list.overrides).forEach(function (k) { if (keys[k]) o[k] = S.list.overrides[k]; else changed = true; });
-    Object.keys(S.list.moved).forEach(function (k) { if (keys[k]) mv[k] = S.list.moved[k]; else changed = true; });
     Object.keys(S.list.checked).forEach(function (k) { if (k.indexOf("r:") !== 0 || keys[k.slice(2)]) c[k] = true; else changed = true; });
-    if (changed) { S.list.overrides = o; S.list.checked = c; S.list.moved = mv; persistList(); }
+    if (changed) { S.list.overrides = o; S.list.checked = c; persistList(); }
   }
   var lastOpen = [];
   var sorter = null;
@@ -846,8 +854,7 @@ h1 {
     return '<li class="item' + (on ? " done" : "") + '"><label class="rowlab"><input type="checkbox" class="chk" data-key="' + esc(key) + '"' + (on ? " checked" : "") + '>' +
       '<span class="txt"><span class="line">' + (qtyText ? '<span class="qty">' + esc(qtyText) + "</span> " : "") + esc(name) + "</span>" +
       (subHtml ? "<small>" + subHtml + "</small>" : "") +
-      '<span class="tags"><button class="tag' + (prod ? " on" : "") + '" data-act="cat" data-key="' + esc(key) + '" aria-pressed="' + (prod ? "true" : "false") + '">' + (prod ? "Produce ×" : "+ Produce") + "</button>" +
-      '<button class="tag" data-act="tocostco" data-key="' + esc(key) + '" aria-label="Move ' + esc(name) + ' to the Costco list">Move to Costco</button></span></span></label>' +
+      '<button class="tag' + (prod ? " on" : "") + '" data-act="cat" data-key="' + esc(key) + '" aria-pressed="' + (prod ? "true" : "false") + '">' + (prod ? "Produce ×" : "+ Produce") + "</button></span></label>" +
       (stepKey ? '<div class="qstep"><button class="qb" data-act="li-dec" data-key="' + esc(stepKey) + '" aria-label="Buy one fewer ' + esc(name) + '">−</button><button class="qb" data-act="li-inc" data-key="' + esc(stepKey) + '" aria-label="Buy one more ' + esc(name) + '">+</button></div>' : "") +
       (extraId ? '<button class="x" data-act="rmextra" data-id="' + esc(extraId) + '" aria-label="Remove ' + esc(name) + '">×</button>' : "") + "</li>";
   }
@@ -896,8 +903,7 @@ h1 {
     }
     if (skipped.length) {
       h += '<div class="group"><h2>Not buying <span>' + skipped.length + '</span></h2><ul class="items">' + skipped.map(function (it) {
-        var mv = !!S.list.moved[it.key];
-        return '<li class="item skip"><div class="rowlab"><span class="txt"><span class="line">' + esc(it.name) + '</span><small>' + (mv ? "Moved to Costco · " : "") + 'Was ' + esc(buyText(it.qty, it.unit)) + '</small></span></div>' +
+        return '<li class="item skip"><div class="rowlab"><span class="txt"><span class="line">' + esc(it.name) + '</span><small>Was ' + esc(buyText(it.qty, it.unit)) + '</small></span></div>' +
           '<div class="qstep"><button class="btn ghost small" data-act="li-reset" data-key="' + esc(it.key) + '">Put back</button></div></li>';
       }).join("") + "</ul></div>";
     }
@@ -933,8 +939,7 @@ h1 {
     var on = !!S.costco.checked[x.id];
     return '<li class="item' + (on ? " done" : "") + '"><label class="rowlab"><input type="checkbox" class="chk" data-id="' + esc(x.id) + '"' + (on ? " checked" : "") + '>' +
       '<span class="txt"><span class="line"><span class="qty">' + esc(buyText(x.qty, x.unit)) + "</span> " + esc(x.text) + "</span>" +
-      (x.from ? "<small>From your grocery list</small>" : "") +
-      '<span class="tags"><button class="tag" data-act="tolist" data-id="' + esc(x.id) + '" aria-label="Move ' + esc(x.text) + ' back to the grocery list">Back to grocery list</button></span></span></label>' +
+      "</span></label>" +
       (on ? "" : '<div class="qstep"><button class="qb" data-act="co-dec" data-id="' + esc(x.id) + '" aria-label="Buy one fewer ' + esc(x.text) + '">−</button><button class="qb" data-act="co-inc" data-id="' + esc(x.id) + '" aria-label="Buy one more ' + esc(x.text) + '">+</button></div>') +
       '<button class="x" data-act="co-rm" data-id="' + esc(x.id) + '" aria-label="Remove ' + esc(x.text) + '">×</button></li>';
   }
@@ -944,7 +949,7 @@ h1 {
     var done = items.filter(function (x) { return !!S.costco.checked[x.id]; });
     var h = "";
     if (!items.length) {
-      h += '<p class="hint-text">Type what you need from Costco into the box above, or tap Move to Costco on any item on your grocery list. Recipes never add to this list, and clearing the grocery list leaves it alone.</p>';
+      h += '<p class="hint-text">Type what you need from Costco into the box above. Recipes never add to this list, and clearing the grocery list leaves it alone.</p>';
     } else {
       if (!open.length) h += '<p class="hint-text">Everything is checked off.</p>';
       h += '<ul class="items">' + open.map(costcoRow).join("") + done.map(costcoRow).join("") + "</ul>";
@@ -960,57 +965,12 @@ h1 {
     $("costcoBody").innerHTML = h;
     return { total: items.length, left: open.length };
   }
-  /* Moving a grocery item to Costco: a typed item moves over as is; a recipe item is set to 0 here and marked as moved. */
-  function moveToCostco(key) {
-    var c = Object.assign({}, S.list.checked);
-    delete c[key];
-    if (key.indexOf("x:") === 0) {
-      var e = S.list.extras.filter(function (x) { return "x:" + x.id === key; })[0];
-      if (!e) return;
-      S.list.extras = S.list.extras.filter(function (x) { return x !== e; });
-      S.costco.items = S.costco.items.concat([{ id: newId(), text: e.text, qty: e.qty || 1, unit: "", from: "" }]);
-    } else {
-      var k = key.slice(2);
-      var it = aggregate().filter(function (x) { return x.key === k; })[0];
-      if (!it) return;
-      var ov = S.list.overrides[k];
-      var qty = ov !== undefined && ov > 0 ? ov : it.qty;
-      var cid = newId();
-      S.costco.items = S.costco.items.concat([{ id: cid, text: it.name, qty: qty, unit: it.unit || "", from: k }]);
-      var o = Object.assign({}, S.list.overrides); o[k] = 0; S.list.overrides = o;
-      var mv = Object.assign({}, S.list.moved); mv[k] = cid; S.list.moved = mv;
-    }
-    S.list.checked = c;
-    persistList();
-    persistCostco();
-    toast("Moved to Costco");
-    renderAll();
-  }
   function removeCostcoItem(id) {
     var ck = Object.assign({}, S.costco.checked);
     delete ck[id];
     S.costco.checked = ck;
     S.costco.items = S.costco.items.filter(function (x) { return x.id !== id; });
   }
-  /* Moving back: a recipe item gets its grocery list amount back; anything else is added as a typed item. */
-  function moveToList(id) {
-    var x = S.costco.items.filter(function (i) { return i.id === id; })[0];
-    if (!x) return;
-    removeCostcoItem(id);
-    var k = x.from;
-    if (k && S.list.moved[k] === x.id && aggregate().some(function (it) { return it.key === k; })) {
-      var o = Object.assign({}, S.list.overrides); delete o[k]; S.list.overrides = o;
-      var mv = Object.assign({}, S.list.moved); delete mv[k]; S.list.moved = mv;
-    } else {
-      var text = x.unit ? x.text + " (" + fmtQty(x.qty) + " " + unitText(x.unit, x.qty) + ")" : x.text;
-      S.list.extras = S.list.extras.concat([{ id: newId(), text: text, qty: x.unit ? 1 : Math.max(1, Math.round(x.qty)) }]);
-    }
-    persistList();
-    persistCostco();
-    toast("Moved back to the grocery list");
-    renderAll();
-  }
-
   /* ---------- Rendering ---------- */
   function cardHtml(r) {
     var n = ingredientsOf(r).length, s = stepLines(r.steps).length;
@@ -1143,8 +1103,6 @@ h1 {
     if (act === "tab-recipes") return go("recipes");
     if (act === "tab-list") return go("list");
     if (act === "tab-costco") return go("costco");
-    if (act === "tocostco") return moveToCostco(el.getAttribute("data-key"));
-    if (act === "tolist") return moveToList(id);
     if (act === "co-dec" || act === "co-inc") {
       S.costco.items = S.costco.items.map(function (x) {
         return x.id === id ? Object.assign({}, x, { qty: Math.max(1, x.qty + (act === "co-inc" ? 1 : -1)) }) : x;
@@ -1227,17 +1185,9 @@ h1 {
     if (act === "li-dec") return adjustQty(el.getAttribute("data-key"), -1);
     if (act === "li-inc") return adjustQty(el.getAttribute("data-key"), 1);
     if (act === "li-reset") {
-      var rk = el.getAttribute("data-key");
       var o2 = Object.assign({}, S.list.overrides);
-      delete o2[rk];
+      delete o2[el.getAttribute("data-key")];
       S.list.overrides = o2;
-      if (S.list.moved[rk]) {
-        removeCostcoItem(S.list.moved[rk]);
-        persistCostco();
-        var mv2 = Object.assign({}, S.list.moved);
-        delete mv2[rk];
-        S.list.moved = mv2;
-      }
       persistList();
       return renderAll();
     }
@@ -1254,7 +1204,6 @@ h1 {
       S.list.extras = [];
       S.list.checked = {};
       S.list.overrides = {};
-      S.list.moved = {};
       persistList();
       toast("List cleared");
       return renderAll();
@@ -1296,7 +1245,7 @@ h1 {
     e.preventDefault();
     var input = $("costcoInput"), text = input.value.trim();
     if (!text) return;
-    S.costco.items = S.costco.items.concat([{ id: newId(), text: text, qty: 1, unit: "", from: "" }]);
+    S.costco.items = S.costco.items.concat([{ id: newId(), text: text, qty: 1, unit: "" }]);
     input.value = "";
     persistCostco();
     renderAll();
@@ -1363,8 +1312,9 @@ h1 {
         overrides: Object.assign({}, d && d.overrides ? d.overrides : {}),
         cats: Object.assign({}, d && d.cats ? d.cats : {}),
         order: d && Array.isArray(d.order) ? d.order.slice() : [],
-        moved: Object.assign({}, d && d.moved ? d.moved : {})
+        moved: d && d.moved ? d.moved : null
       };
+      if (clearMoved()) persistList();
       renderAll();
     }, fail);
     db.doc("lists/costco").onSnapshot(function (snap) {
