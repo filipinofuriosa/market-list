@@ -21,7 +21,8 @@ img { max-width: 100%; }
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&display=swap">
 <style>
-/* Layout: one narrow column built for a phone. Sticky title on top, three tabs fixed at the bottom (Recipes, Grocery list, Costco). */
+/* Layout: one narrow column built for a phone. Sticky title on top, three tabs fixed at the bottom (Recipes, Grocery list, Costco).
+   The grocery list is grouped under store-section headings in the order set under Store order. */
 :root {
   --bg: #F4F6F2;
   --surface: #FFFFFF;
@@ -344,19 +345,42 @@ h1 {
   text-decoration: underline;
 }
 .item.skip .rowlab { cursor: default; }
-.tag {
+/* Section tag on each item: a small pill that opens the phone's own picker. */
+.tagsel {
   justify-self: start;
+  max-width: 100%;
   margin-top: 6px;
   min-height: 32px;
-  padding: 0 12px;
+  padding: 0 28px 0 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: transparent;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%235C6B63' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 10px center / 12px 12px no-repeat;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+  -webkit-appearance: none;
+  appearance: none;
+  text-overflow: ellipsis;
 }
-.tag.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.tagsel.set { color: var(--accent); border-color: var(--accent); background-color: var(--accent-soft); }
+/* Store order editor: one compact row per section with small up and down arrows. */
+.secrows { list-style: none; margin: 0 0 12px; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.secrow { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 14px; border-top: 1px solid var(--line); min-height: 48px; }
+.secrow:first-child { border-top: 0; }
+.secrow .n { flex: none; width: 22px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.secrow .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mini {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 16px;
+  line-height: 1;
+}
+.mini:disabled { opacity: 0.3; cursor: default; }
 .grip {
   width: 48px;
   height: 48px;
@@ -622,9 +646,10 @@ h1 {
   /* ---------- State ---------- */
   var S = {
     recipes: [],
-    list: { extras: [], checked: {}, overrides: {}, cats: {}, order: [] },
+    list: { extras: [], checked: {}, overrides: {}, cats: {}, order: [], tags: {}, sections: [] },
     costco: { items: [], checked: {} },
     reorder: false,
+    editSections: false,
     confirmClear: false,
     confirmClearCostco: false,
     tab: "recipes",
@@ -676,6 +701,8 @@ h1 {
     S.list.overrides = S.list.overrides || {};
     S.list.cats = S.list.cats || {};
     S.list.order = Array.isArray(S.list.order) ? S.list.order : [];
+    S.list.tags = S.list.tags && typeof S.list.tags === "object" ? S.list.tags : {};
+    S.list.sections = cleanSections(S.list.sections);
     if (clearMoved()) saveLocal();
     applyUpdates();
     loadCostco();
@@ -740,7 +767,7 @@ h1 {
   }
   function persistList() {
     if (S.mode === "db") {
-      var data = { extras: S.list.extras.map(function (e) { return { id: e.id, text: e.text, qty: e.qty || 1 }; }), checked: Object.assign({}, S.list.checked), overrides: Object.assign({}, S.list.overrides), cats: Object.assign({}, S.list.cats), order: S.list.order.slice() };
+      var data = { extras: S.list.extras.map(function (e) { return { id: e.id, text: e.text, qty: e.qty || 1 }; }), checked: Object.assign({}, S.list.checked), overrides: Object.assign({}, S.list.overrides), cats: Object.assign({}, S.list.cats), order: S.list.order.slice(), tags: Object.assign({}, S.list.tags), sections: S.list.sections.slice() };
       queue("lists/main", function () { return S.db.doc("lists/main").set(data); });
     } else saveLocal();
   }
@@ -774,14 +801,78 @@ h1 {
     items.sort(function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
     return items;
   }
-  /* Produce is guessed from the name. A tap on the item's label sets it by hand, and that choice is remembered by ingredient and unit. */
-  var PRODUCE_RE = new RegExp("\\b(?:apple|banana|orange|lemon|lime|grapefruit|grape|strawberr(?:y|ies)|blueberr(?:y|ies)|raspberr(?:y|ies)|blackberr(?:y|ies)|cranberr(?:y|ies)|melon|watermelon|cantaloupe|peach|pear|plum|cherr(?:y|ies)|mango|pineapple|avocado|tomato|cucumber|zucchini|squash|pumpkin|eggplant|carrot|celery|onion|scallion|shallot|leek|garlic|ginger|potato|mushroom|lettuce|spinach|kale|arugula|cabbage|broccoli|cauliflower|asparagus|brussels sprout|bell pepper|jalape[n\\u00F1]o|serrano|poblano|habanero|green bean|radish|beet|turnip|parsnip|fennel|cilantro|parsley|basil|mint|dill|rosemary|thyme|sage|chive)(?:e?s)?\\b", "i");
-  var NOT_PRODUCE_RE = /\b(?:canned|diced|crushed|paste|sauce|dried|ground|powder|frozen|juice|broth|stock|packets?|seasoning|pickled|flakes|cheese|cream|butter|bread|soup|salsa|dressing|chips?|jam|jelly|extract|oil|vinegar)\b/i;
-  function isProduce(key, name, unit) {
-    var c = S.list.cats[key];
-    if (c) return c === "produce";
-    if (/^(?:can|jar|carton|bottle|box)$/.test(unit || "")) return false;
-    return PRODUCE_RE.test(name) && !NOT_PRODUCE_RE.test(name);
+  /* ---------- Store sections ----------
+     Default order is a typical Market Basket walk: produce at the door, bakery and deli, meat along the back,
+     the center aisles, then dairy and frozen at the end. It's a starting guess, not a map of any one store,
+     so the order can be changed in the app (Store order) and is saved on the phone. */
+  var SECTIONS = [
+    { id: "produce", name: "Produce" },
+    { id: "bakery", name: "Bakery & bread" },
+    { id: "deli", name: "Deli & specialty cheese" },
+    { id: "meat", name: "Meat & seafood" },
+    { id: "pasta", name: "Pasta, rice & sides" },
+    { id: "canned", name: "Canned goods & soup" },
+    { id: "condiments", name: "Oils, sauces & condiments" },
+    { id: "baking", name: "Baking & spices" },
+    { id: "breakfast", name: "Cereal, coffee & tea" },
+    { id: "snacks", name: "Snacks & nuts" },
+    { id: "drinks", name: "Drinks" },
+    { id: "household", name: "Household & paper" },
+    { id: "personal", name: "Health & beauty" },
+    { id: "dairy", name: "Dairy & eggs" },
+    { id: "frozen", name: "Frozen" },
+    { id: "other", name: "Other" }
+  ];
+  var SEC_NAME = {};
+  SECTIONS.forEach(function (x) { SEC_NAME[x.id] = x.name; });
+  function cleanSections(arr) {
+    var out = [], seen = {};
+    (Array.isArray(arr) ? arr : []).forEach(function (id) { if (SEC_NAME[id] && !seen[id]) { seen[id] = true; out.push(id); } });
+    SECTIONS.forEach(function (x) { if (!seen[x.id]) out.push(x.id); });
+    return out;
+  }
+  /* Guesses an item's section from its name. Rules are checked top to bottom and the first match wins,
+     so processed forms (canned, dried, frozen, broth, powder) are caught before the fresh item. */
+  var w = function (src) { return new RegExp("\\b(?:" + src + ")\\b", "i"); };
+  var TAG_RULES = [
+    ["frozen", w("frozen|ice cream|popsicles?|tater tots?|pizza rolls|ice pops?|bag of ice")],
+    ["canned", w("canned|broth|stock|soups?|bouillon|diced tomato(?:es)?|crushed tomato(?:es)?|tomato (?:paste|sauce)|whole peeled tomato(?:es)?|(?:kidney|black|pinto|cannellini|navy|great northern|baked|refried|chili|garbanzo) beans?|chickpeas?|evaporated milk|condensed milk|coconut milk|tuna|puree|cranberry sauce|canned \\w+|spam|green chiles|mandarin oranges")],
+    ["baking", w("(?:all-purpose |bread |cake |almond |coconut )?flour|sugar|brown sugar|baking (?:soda|powder)|yeast|vanilla|extracts?|cocoa|chocolate chips|sprinkles|cornstarch|bread ?crumbs|panko|cake mix|brownie mix|frosting|shortening|molasses|salt|(?:black|white|ground|cracked) pepper|peppercorns?|cayenne|paprika|cumin|cinnamon|nutmeg|oregano|turmeric|curry|chili powder|\\w+ powder|seasonings?|spices?|dried \\w+|rubbed sage|ground (?:ginger|cinnamon|cumin|nutmeg|cloves|coriander|mustard|sage|allspice)|(?:red )?pepper flakes|bay leaves|packets?|taco mix|gravy mix|pie filling|pie crusts?")],
+    ["condiments", w("oil|vinegar|ketchup|mustard|mayo|mayonnaise|relish|hot sauce|soy sauce|sriracha|bbq|barbecue|dressings?|salsa|pasta sauce|marinara|alfredo|pesto|jam|jelly|preserves|peanut butter|honey|syrup|maple|pickles?|olives?|worcestershire|teriyaki|hoisin|capers")],
+    ["pasta", w("pasta|spaghetti|penne|orzo|cavatappi|macaroni|elbows|noodles?|lasagna|linguine|fettuccine|ziti|rigatoni|rotini|farfalle|shells|rice|quinoa|couscous|lentils|dried beans|stuffing|mac and cheese|mac & cheese|instant potatoes|ramen")],
+    ["breakfast", w("cereal|oatmeal|oats|granola|pancake mix|waffle mix|coffee|k-cups?|tea|tea bags|pop-?tarts|breakfast bars")],
+    ["snacks", w("chips|crackers|pretzels|popcorn|cookies|nuts|almonds|peanuts|cashews|pecans|walnuts|pistachios|trail mix|candy|chocolate|granola bars|fruit snacks|raisins|dried cranberries|goldfish|cheez-?its")],
+    ["drinks", w("water|seltzer|soda|juice|cider|lemonade|sparkling|coke|pepsi|gatorade|beer|wine|kombucha|energy drinks?|iced tea|ginger ale")],
+    ["household", w("paper towels?|toilet paper|napkins|tissues|trash bags|garbage bags|aluminum foil|foil|plastic wrap|ziploc|storage bags|sandwich bags|dish soap|detergent|dishwasher|sponges?|cleaner|bleach|batteries|light bulbs?|cat litter|litter|cat food|dog food|cat treats|foil pans?|parchment|wax paper|paper plates|plastic cups|cups|plates|candles|lysol|swiffer")],
+    ["personal", w("shampoo|conditioner|soap|body wash|toothpaste|toothbrush(?:es)?|deodorant|razors?|lotion|sunscreen|vitamins|advil|tylenol|ibuprofen|band-?aids?|floss|cotton balls|q-?tips|tampons|pads")],
+    ["deli", w("rotisserie|deli|salami|prosciutto|pepperoni|hummus|boursin|brie|goat cheese|feta|fresh mozzarella|burrata|sliced turkey|sliced ham|cold cuts|prepared")],
+    ["bakery", w("bread|loaf|loaves|bagels?|buns?|rolls?|baguettes?|tortillas?|pitas?|naan|croissants?|english muffins?|muffins?|donuts?|doughnuts?|cakes?|cupcakes?|pies?|brioche|sourdough")],
+    ["meat", w("steaks?|sirloin|beef|chicken|turkey|pork|bacon|sausages?|ham|lamb|veal|ribs|brisket|chops?|ground (?:beef|turkey|pork|chicken)|salmon|shrimp|cod|haddock|tilapia|fish|scallops?|lobster|crab|hot dogs?|meatballs?|roast|tenderloin|wings|thighs|drumsticks|kielbasa|chorizo")],
+    ["dairy", w("milk|cream|half (?:and|&) half|butter|cheese|cheddar|mozzarella|colby|jack|parmesan|parmigiano|swiss|provolone|ricotta|cottage cheese|sour cream|yogurt|eggs?|creamer|cream cheese|whipped|crescent rolls|biscuit dough|margarine|tofu|orange juice|oj")],
+    ["produce", w("apples?|bananas?|oranges?|lemons?|limes?|grapefruits?|grapes?|strawberr(?:y|ies)|blueberr(?:y|ies)|raspberr(?:y|ies)|blackberr(?:y|ies)|cranberr(?:y|ies)|berries|melons?|watermelons?|cantaloupes?|peach(?:es)?|pears?|plums?|cherr(?:y|ies)|mangos?|mangoes|pineapples?|avocados?|tomato(?:es)?|cucumbers?|zucchini|squash|pumpkins?|eggplants?|carrots?|celery|onions?|scallions?|shallots?|leeks?|garlic|ginger|potato(?:es)?|sweet potato(?:es)?|yams?|mushrooms?|lettuce|romaine|spinach|kale|arugula|salad|cabbage|broccoli|cauliflower|asparagus|brussels sprouts?|(?:bell )?peppers?|jalape[nñ]os?|serranos?|poblanos?|habaneros?|green beans?|snap peas|corn on the cob|radish(?:es)?|beets?|turnips?|parsnips?|fennel|cilantro|parsley|basil|mint|dill|rosemary|thyme|sage|chives?|herbs?|kiwis?|clementines?")]
+  ];
+  /* Parenthesized notes, like "(block)" or "(32 oz)", are ignored when guessing. */
+  function guessSection(name) {
+    var n = String(name || "").replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim() || String(name || "");
+    for (var i = 0; i < TAG_RULES.length; i++) if (TAG_RULES[i][1].test(n)) return TAG_RULES[i][0];
+    return "other";
+  }
+  /* A tag set by hand is saved by item name (not by recipe or list entry), so it sticks after the list is cleared
+     and comes back whenever that item is added again. */
+  function tagKey(name) { return singular(String(name || "").replace(/\s+/g, " ")); }
+  function sectionOf(key, name) {
+    var t = S.list.tags[tagKey(name)];
+    if (t && SEC_NAME[t]) return t;
+    var g = guessSection(name), c = S.list.cats[key];
+    /* Earlier versions had a Produce button; a "produce" choice made with it is still honored. */
+    if (c === "produce") return "produce";
+    if (c === "other" && g === "produce") return "other";
+    return g;
+  }
+  function tagSelect(key, name, sec) {
+    var set = !!S.list.tags[tagKey(name)];
+    return '<select class="tagsel' + (set ? " set" : "") + '" data-key="' + esc(key) + '" data-name="' + esc(name) + '" aria-label="Store section for ' + esc(name) + '">' +
+      S.list.sections.map(function (id) { return '<option value="' + id + '"' + (id === sec ? " selected" : "") + ">" + esc(SEC_NAME[id]) + "</option>"; }).join("") + "</select>";
   }
   /* Changes made with the - and + buttons are kept as overrides of the combined total, keyed by ingredient and unit. */
   function adjustQty(key, delta) {
@@ -818,48 +909,43 @@ h1 {
     Object.keys(S.list.checked).forEach(function (k) { if (k.indexOf("r:") !== 0 || keys[k.slice(2)]) c[k] = true; else changed = true; });
     if (changed) { S.list.overrides = o; S.list.checked = c; persistList(); }
   }
-  var lastOpen = [];
-  var sorter = null;
-  /* In Reorder mode an unchecked row swaps its quantity buttons for a drag handle. */
-  function itemRow(key, qtyText, name, subHtml, extraId, stepKey, prod, draggable) {
-    if (!draggable) return itemRowBase(key, qtyText, name, subHtml, extraId, stepKey, prod);
-    var html = itemRowBase(key, qtyText, name, subHtml, null, null, prod);
-    var grip = '<div class="qstep"><button type="button" class="grip" aria-label="Drag to move ' + esc(name) + '">☰</button></div>';
-    return html.replace('<li class="item', function () { return '<li data-key="' + esc(key) + '" class="item drag'; })
+  var sorters = [];
+  /* In Reorder mode an unchecked row swaps its quantity buttons for a drag handle. Items move within their own section. */
+  function itemRow(x, draggable) {
+    if (!draggable) return itemRowBase(x, null, x.stepKey, !x.on);
+    var html = itemRowBase(x, null, null, false);
+    var grip = '<div class="qstep"><button type="button" class="grip" aria-label="Drag to move ' + esc(x.name) + '">☰</button></div>';
+    return html.replace('<li class="item', function () { return '<li data-key="' + esc(x.key) + '" class="item drag'; })
       .replace(/<\/li>$/, function () { return grip + "</li>"; });
   }
-  /* Dropping an item above or below the produce line also changes its produce tag. */
-  function onDragEnd(evt) {
-    var moved = evt.item.getAttribute("data-key");
-    var seq = Array.prototype.map.call($("itemList").querySelectorAll("li.drag"), function (li) { return li.getAttribute("data-key"); });
-    var idx = seq.indexOf(moved), was = null;
-    lastOpen.forEach(function (x) { if (x.key === moved) was = x.prod; });
-    if (idx < 0 || was === null) { setTimeout(renderAll, 0); return; }
-    var P = lastOpen.filter(function (x) { return x.key !== moved && x.prod; }).length;
-    var now = idx < P ? true : idx > P ? false : was;
-    if (now !== was) {
-      var nc = Object.assign({}, S.list.cats);
-      nc[moved] = now ? "produce" : "other";
-      S.list.cats = nc;
-      toast(now ? "Moved into produce" : "Moved out of produce");
-    }
+  function onDragEnd() {
+    var seq = Array.prototype.map.call($("listBody").querySelectorAll("li.drag"), function (li) { return li.getAttribute("data-key"); });
     var inSeq = {};
     seq.forEach(function (k) { inSeq[k] = true; });
     S.list.order = seq.concat(S.list.order.filter(function (k) { return !inSeq[k]; }));
     persistList();
     setTimeout(renderAll, 0);
   }
-  function itemRowBase(key, qtyText, name, subHtml, extraId, stepKey, prod) {
-    var on = !!S.list.checked[key];
-    return '<li class="item' + (on ? " done" : "") + '"><label class="rowlab"><input type="checkbox" class="chk" data-key="' + esc(key) + '"' + (on ? " checked" : "") + '>' +
-      '<span class="txt"><span class="line">' + (qtyText ? '<span class="qty">' + esc(qtyText) + "</span> " : "") + esc(name) + "</span>" +
-      (subHtml ? "<small>" + subHtml + "</small>" : "") +
-      '<button class="tag' + (prod ? " on" : "") + '" data-act="cat" data-key="' + esc(key) + '" aria-pressed="' + (prod ? "true" : "false") + '">' + (prod ? "Produce ×" : "+ Produce") + "</button></span></label>" +
-      (stepKey ? '<div class="qstep"><button class="qb" data-act="li-dec" data-key="' + esc(stepKey) + '" aria-label="Buy one fewer ' + esc(name) + '">−</button><button class="qb" data-act="li-inc" data-key="' + esc(stepKey) + '" aria-label="Buy one more ' + esc(name) + '">+</button></div>' : "") +
-      (extraId ? '<button class="x" data-act="rmextra" data-id="' + esc(extraId) + '" aria-label="Remove ' + esc(name) + '">×</button>' : "") + "</li>";
+  function itemRowBase(x, extraId, stepKey, showTag) {
+    var on = !!S.list.checked[x.key];
+    return '<li class="item' + (on ? " done" : "") + '"><label class="rowlab"><input type="checkbox" class="chk" data-key="' + esc(x.key) + '"' + (on ? " checked" : "") + '>' +
+      '<span class="txt"><span class="line">' + (x.qtyText ? '<span class="qty">' + esc(x.qtyText) + "</span> " : "") + esc(x.name) + "</span>" +
+      (x.sub ? "<small>" + x.sub + "</small>" : "") +
+      (showTag ? tagSelect(x.key, x.name, x.sec) : "") + "</span></label>" +
+      (stepKey ? '<div class="qstep"><button class="qb" data-act="li-dec" data-key="' + esc(stepKey) + '" aria-label="Buy one fewer ' + esc(x.name) + '">−</button><button class="qb" data-act="li-inc" data-key="' + esc(stepKey) + '" aria-label="Buy one more ' + esc(x.name) + '">+</button></div>' : "") +
+      (extraId ? '<button class="x" data-act="rmextra" data-id="' + esc(extraId) + '" aria-label="Remove ' + esc(x.name) + '">×</button>' : "") + "</li>";
   }
-  function sortDone(arr) {
-    return arr.filter(function (x) { return !x.on; }).concat(arr.filter(function (x) { return x.on; }));
+  function sectionEditor() {
+    var ids = S.list.sections, last = ids.length - 1;
+    var custom = ids.join() !== SECTIONS.map(function (x) { return x.id; }).join();
+    return '<p class="note">Put the sections in the order you walk your store. The list follows this order.</p>' +
+      '<ul class="secrows">' + ids.map(function (id, i) {
+        return '<li class="secrow"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(SEC_NAME[id]) + "</span>" +
+          '<button class="mini" data-act="sec-up" data-id="' + id + '"' + (i === 0 ? " disabled" : "") + ' aria-label="Move ' + esc(SEC_NAME[id]) + ' up">↑</button>' +
+          '<button class="mini" data-act="sec-down" data-id="' + id + '"' + (i === last ? " disabled" : "") + ' aria-label="Move ' + esc(SEC_NAME[id]) + ' down">↓</button></li>';
+      }).join("") + "</ul>" +
+      '<div class="actions"><button class="btn small" data-act="sections">Done</button>' +
+      (custom ? '<button class="btn ghost small" data-act="sec-reset">Reset to typical order</button>' : "") + "</div>";
   }
   function renderList() {
     var skipped = [], items = [];
@@ -869,66 +955,70 @@ h1 {
       var key = "r:" + it.key;
       if (qty <= 0) { skipped.push(it); return; }
       var sub = esc(it.from.join(", ")) + (has ? ' · edited, was ' + esc(fmtQty(it.qty)) + ' <button class="link" data-act="li-reset" data-key="' + esc(it.key) + '">Reset</button>' : "");
-      items.push({ on: !!S.list.checked[key], name: it.name, prod: isProduce(key, it.name, it.unit), key: key, qtyText: buyText(qty, it.unit), sub: sub, stepKey: it.key, extraId: null });
+      items.push({ on: !!S.list.checked[key], name: it.name, sec: sectionOf(key, it.name), key: key, qtyText: buyText(qty, it.unit), sub: sub, stepKey: it.key, extraId: null });
     });
     S.list.extras.forEach(function (e) {
       var key = "x:" + e.id;
-      items.push({ on: !!S.list.checked[key], name: e.text, prod: isProduce(key, e.text, ""), key: key, qtyText: buyText(e.qty || 1, ""), sub: "Added by you", stepKey: key, extraId: e.id });
+      items.push({ on: !!S.list.checked[key], name: e.text, sec: sectionOf(key, e.text), key: key, qtyText: buyText(e.qty || 1, ""), sub: "Added by you", stepKey: key, extraId: e.id });
     });
     var byName = function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); };
     var rank = function (k) { var i = S.list.order.indexOf(k); return i < 0 ? 1e9 : i; };
-    var byOrder = function (a, b) {
-      if (a.prod !== b.prod) return a.prod ? -1 : 1;
-      var d = rank(a.key) - rank(b.key);
-      return d !== 0 ? d : byName(a, b);
-    };
-    var open = items.filter(function (x) { return !x.on; }).sort(byOrder);
+    var byOrder = function (a, b) { var d = rank(a.key) - rank(b.key); return d !== 0 ? d : byName(a, b); };
+    var open = items.filter(function (x) { return !x.on; });
     var done = items.filter(function (x) { return x.on; }).sort(byName);
-    lastOpen = open.map(function (x) { return { key: x.key, prod: x.prod }; });
     if (open.length < 2) S.reorder = false;
     var h = "";
-    if (!items.length) {
+    if (S.editSections) {
+      h += sectionEditor();
+    } else if (!items.length) {
       h += '<p class="hint-text">Pick recipes on the Recipes tab and their ingredients show up here. Anything else you need, type into the box above.</p>';
     } else {
       if (!open.length) h += '<p class="hint-text">Everything is checked off.</p>';
-      if (open.length > 1 && window.Sortable) {
-        h += '<div class="actions"><button class="btn ghost small" data-act="reorder" aria-pressed="' + (S.reorder ? "true" : "false") + '">' + (S.reorder ? "Done reordering" : "Reorder items") + "</button></div>";
-        if (S.reorder) h += '<p class="note">Hold the handle on the right and drag an item to move it. Dropping it above or below the produce items changes its produce tag.</p>';
+      h += '<div class="actions">' + (open.length > 1 && window.Sortable
+        ? '<button class="btn ghost small" data-act="reorder" aria-pressed="' + (S.reorder ? "true" : "false") + '">' + (S.reorder ? "Done reordering" : "Reorder items") + "</button>"
+        : "") + (S.reorder ? "" : '<button class="btn ghost small" data-act="sections">Store order</button>') + "</div>";
+      if (S.reorder) h += '<p class="note">Hold the handle on the right and drag an item to move it within its section. To move it to another section, change its section tag.</p>';
+      S.list.sections.forEach(function (id) {
+        var g = open.filter(function (x) { return x.sec === id; }).sort(byOrder);
+        if (!g.length) return;
+        h += '<div class="group"><h2>' + esc(SEC_NAME[id]) + " <span>" + g.length + '</span></h2><ul class="items sec-list">' +
+          g.map(function (x) { return itemRow(x, S.reorder); }).join("") + "</ul></div>";
+      });
+      if (done.length) {
+        h += '<div class="group"><h2>Checked off <span>' + done.length + '</span></h2><ul class="items">' +
+          done.map(function (x) { return itemRow(x, false); }).join("") + "</ul></div>";
       }
-      h += '<ul class="items" id="itemList">' + open.map(function (x) {
-        return itemRow(x.key, x.qtyText, x.name, x.sub, null, x.stepKey, x.prod, S.reorder);
-      }).join("") + done.map(function (x) {
-        return itemRow(x.key, x.qtyText, x.name, x.sub, null, x.stepKey, x.prod, null);
-      }).join("") + "</ul>";
     }
-    if (skipped.length) {
+    if (!S.editSections && skipped.length) {
       h += '<div class="group"><h2>Not buying <span>' + skipped.length + '</span></h2><ul class="items">' + skipped.map(function (it) {
         return '<li class="item skip"><div class="rowlab"><span class="txt"><span class="line">' + esc(it.name) + '</span><small>Was ' + esc(buyText(it.qty, it.unit)) + '</small></span></div>' +
           '<div class="qstep"><button class="btn ghost small" data-act="li-reset" data-key="' + esc(it.key) + '">Put back</button></div></li>';
       }).join("") + "</ul></div>";
     }
-    var anyChecked = done.length > 0;
     var checkedExtras = done.some(function (x) { return !!x.extraId; });
-    if (anyChecked) {
+    if (!S.editSections && done.length) {
       h += '<div class="actions"><button class="btn ghost small" data-act="uncheck">Uncheck everything</button>' +
         (checkedExtras ? '<button class="btn ghost small" data-act="rmchecked">Remove checked extras</button>' : "") + "</div>";
     }
-    if (items.length || skipped.length) {
-      if (S.confirmClear) h += '<p class="note">This removes everything on the list. Your saved recipes and Costco list stay.</p>';
+    if (!S.editSections && (items.length || skipped.length)) {
+      if (S.confirmClear) h += '<p class="note">This removes everything on the list. Your saved recipes, section tags and Costco list stay.</p>';
       h += '<div class="actions">' + (S.confirmClear
         ? '<button class="btn danger" data-act="clearlist">Tap again to clear</button><button class="btn ghost" data-act="clearcancel">Cancel</button>'
         : '<button class="btn danger" data-act="clearlist">Clear list</button>') + "</div>";
     }
-    if (sorter) { sorter.destroy(); sorter = null; }
+    sorters.forEach(function (x) { x.destroy(); });
+    sorters = [];
     $("listBody").innerHTML = h;
-    if (S.reorder && window.Sortable && $("itemList")) {
-      sorter = window.Sortable.create($("itemList"), {
-        handle: ".grip",
-        draggable: ".drag",
-        animation: 150,
-        forceFallback: true,
-        ghostClass: "sortable-ghost",
-        onEnd: onDragEnd
+    if (S.reorder && window.Sortable) {
+      Array.prototype.forEach.call($("listBody").querySelectorAll(".sec-list"), function (ul) {
+        sorters.push(window.Sortable.create(ul, {
+          handle: ".grip",
+          draggable: ".drag",
+          animation: 150,
+          forceFallback: true,
+          ghostClass: "sortable-ghost",
+          onEnd: onDragEnd
+        }));
       });
     }
     return { total: items.length, left: open.length };
@@ -1094,7 +1184,7 @@ h1 {
     window.scrollTo(0, 0);
     $("edTitle").focus();
   }
-  function go(view) { S.view = view; S.confirmDelete = null; S.confirmClear = false; S.confirmClearCostco = false; renderAll(); window.scrollTo(0, 0); }
+  function go(view) { S.view = view; S.editSections = false; S.confirmDelete = null; S.confirmClear = false; S.confirmClearCostco = false; renderAll(); window.scrollTo(0, 0); }
 
   document.addEventListener("click", function (e) {
     var el = e.target.closest("[data-act]");
@@ -1175,13 +1265,17 @@ h1 {
       return renderAll();
     }
     if (act === "reorder") { S.reorder = !S.reorder; return renderAll(); }
-    if (act === "cat") {
-      var nc = Object.assign({}, S.list.cats);
-      nc[el.getAttribute("data-key")] = el.classList.contains("on") ? "other" : "produce";
-      S.list.cats = nc;
+    if (act === "sections") { S.editSections = !S.editSections; S.reorder = false; renderAll(); return window.scrollTo(0, 0); }
+    if (act === "sec-up" || act === "sec-down") {
+      var secs = S.list.sections.slice(), si = secs.indexOf(id), sj = si + (act === "sec-up" ? -1 : 1);
+      if (si < 0 || sj < 0 || sj >= secs.length) return;
+      secs[si] = secs[sj];
+      secs[sj] = id;
+      S.list.sections = secs;
       persistList();
       return renderAll();
     }
+    if (act === "sec-reset") { S.list.sections = cleanSections([]); persistList(); return renderAll(); }
     if (act === "li-dec") return adjustQty(el.getAttribute("data-key"), -1);
     if (act === "li-inc") return adjustQty(el.getAttribute("data-key"), 1);
     if (act === "li-reset") {
@@ -1221,6 +1315,14 @@ h1 {
 
   $("listBody").addEventListener("change", function (e) {
     var c = e.target;
+    if (c.classList && c.classList.contains("tagsel")) {
+      var tg = Object.assign({}, S.list.tags);
+      tg[tagKey(c.getAttribute("data-name"))] = c.value;
+      S.list.tags = tg;
+      persistList();
+      toast("Moved to " + SEC_NAME[c.value]);
+      return renderAll();
+    }
     if (!c.classList || !c.classList.contains("chk")) return;
     var key = c.getAttribute("data-key");
     var next = Object.assign({}, S.list.checked);
@@ -1312,6 +1414,8 @@ h1 {
         overrides: Object.assign({}, d && d.overrides ? d.overrides : {}),
         cats: Object.assign({}, d && d.cats ? d.cats : {}),
         order: d && Array.isArray(d.order) ? d.order.slice() : [],
+        tags: Object.assign({}, d && d.tags ? d.tags : {}),
+        sections: cleanSections(d && d.sections),
         moved: d && d.moved ? d.moved : null
       };
       if (clearMoved()) persistList();
